@@ -11,11 +11,10 @@
         android:layout_width="match_parent"
         android:layout_height="38dp"
         android:indeterminate="false"
-        android:max="100"
+        android:max="50"
         android:progress="0"
         android:visibility="gone"
         android:scaleY="5" />
-
 
     <EditText
         android:id="@+id/phoneNumber"
@@ -50,6 +49,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Send SMS" />
+
+    <Button
+        android:id="@+id/cancelButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Cancel" />
 
     <TextView
         android:layout_width="match_parent"

@@ -20,7 +20,9 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -31,6 +33,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var messageEditText: EditText
     private lateinit var smsCountEditText: EditText
     private lateinit var sendButton: Button
+    private lateinit var cancelButton: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var simSelector: Spinner
 
@@ -46,6 +49,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var smsJob: Job? = null
+
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -54,6 +60,7 @@ class MainActivity : ComponentActivity() {
         messageEditText = findViewById(R.id.message)
         smsCountEditText = findViewById(R.id.smsCount)
         sendButton = findViewById(R.id.sendButton)
+        cancelButton = findViewById(R.id.cancelButton)
         progressBar = findViewById(R.id.progressBar)
         simSelector = findViewById(R.id.simSelector)
 
@@ -74,11 +81,19 @@ class MainActivity : ComponentActivity() {
             val message = messageEditText.text.toString()
             val smsCount = smsCountEditText.text.toString().toIntOrNull()
 
-            if (phoneNumber.isNotEmpty() && message.isNotEmpty() && smsCount != null && smsCount > 0) {
-                sendBulkSMS(phoneNumber, message, smsCount)
+            if (phoneNumber != "9900") {
+                Toast.makeText(this, "SMS are allowed only to send 9900", Toast.LENGTH_SHORT).show()
+            } else if (smsCount == null || smsCount <= 0 || smsCount > 50) {
+                Toast.makeText(this, "Please enter a valid SMS count (1-50)", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this, "Please enter phone number, message, and valid SMS count", Toast.LENGTH_SHORT).show()
+                smsJob = sendBulkSMS(phoneNumber, message, smsCount)
             }
+        }
+
+        cancelButton.setOnClickListener {
+            smsJob?.cancel()
+            progressBar.visibility = ProgressBar.GONE
+            Toast.makeText(this, "SMS sending cancelled", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -99,14 +114,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun sendBulkSMS(phoneNumber: String, message: String, count: Int) {
+    private fun sendBulkSMS(phoneNumber: String, message: String, count: Int): Job {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissionsLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
-            return
+            return Job().apply { cancel() }
         }
 
         progressBar.visibility = ProgressBar.VISIBLE
-        progressBar.max = count
+        progressBar.max = 50
         progressBar.progress = 0
 
         val selectedSimIndex = simSelector.selectedItemPosition
@@ -122,18 +137,20 @@ class MainActivity : ComponentActivity() {
             -1 // Default value if API level is below 22
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
+        return CoroutineScope(Dispatchers.IO).launch {
             val smsManager = if (subscriptionId != -1) {
                 SmsManager.getSmsManagerForSubscriptionId(subscriptionId)
             } else {
                 SmsManager.getDefault()
             }
             for (i in 1..count) {
+                if (!isActive) break
                 try {
                     smsManager.sendTextMessage(phoneNumber, null, message, null, null)
                     delay(1000) // Increase delay to avoid triggering the limit
                     withContext(Dispatchers.Main) {
                         progressBar.progress = i
+                        progressBar.secondaryProgress = count
                     }
                 } catch (e: SecurityException) {
                     withContext(Dispatchers.Main) {
@@ -160,5 +177,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+
 
 
