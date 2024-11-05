@@ -131,7 +131,7 @@ class MainActivity : ComponentActivity() {
             for (i in 1..count) {
                 try {
                     smsManager.sendTextMessage(phoneNumber, null, message, null, null)
-                    delay(500) // Simulate delay
+                    delay(1000) // Increase delay to avoid triggering the limit
                     withContext(Dispatchers.Main) {
                         progressBar.progress = i
                     }
