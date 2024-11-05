@@ -131,7 +131,7 @@ class MainActivity : ComponentActivity() {
             for (i in 1..count) {
                 try {
                     smsManager.sendTextMessage(phoneNumber, null, message, null, null)
-                    delay(200) // Simulate delay
+                    delay(500) // Simulate delay
                     withContext(Dispatchers.Main) {
                         progressBar.progress = i
                     }
